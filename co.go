@@ -3,6 +3,9 @@ package co
 import (
     "os"
     "io"
+    "strings"
+    //"strconv"
+    "unicode"
 
     log "github.com/sirupsen/logrus"
 )
@@ -39,14 +42,14 @@ type confuser interface {
 
     // for code obfuscate
     Obfuscate(code string, id ...int)
-    Coalgo(id int, code string)
+    Coalgo(id int, code []string)
     coalgo1(code string) string
     coalgo2(code string) string
-    coalgo3(code string) string
+    coalgo3(code string) []string
 
     // for code deobfuscate
     Deobfuscate(code string, id ...int)
-    Dealgo(id int, code string)
+    Dealgo(id int, code []string)
     dealgo1(code string) string
     dealgo2(code string) string
     dealgo3(code string) string
@@ -126,19 +129,110 @@ func (c *codeObfuscate) Coalgo(id int, code string) {
     }
 }
 
+// coalgo1 encoding the code string with ordinary offset
+// transform, which means map alphabet to next n alphabet
+// with all lower case.
 func (c *codeObfuscate) coalgo1(code string) string {
-    // TODO
-    return code
+    var encode string
+    var alphabet map[int]rune
+
+    encode = strings.ToLower(code)
+
+    for i := 0; i < 26; i++ {
+        for j := 'a'; j <= 'z'; j++ {
+            alphabet[i] = j
+        }
+    }
+
+    for i, _ := range code {
+        num := (int)(code[i]) - 48 - 97 + c.cobit - 26
+        if num > 0 {
+            encode = string(alphabet[num])
+        }
+        encode = string(alphabet[num+26])
+    }
+
+    return encode
 }
 
+// coalgo2 encoding the code string with ordinary offset
+// transform, which means map alphabet to next n alphabet
+// with all upper case.
 func (c *codeObfuscate) coalgo2(code string) string {
-    // TODO
-    return code
+    var encode string
+    var alphabet map[int]rune
+
+    encode = strings.ToUpper(code)
+
+    for i := 0; i < 26; i++ {
+        for j := 'A'; j <= 'Z'; j++ {
+            alphabet[i] = j
+        }
+    }
+
+    for i, _ := range code {
+        num := (int)(code[i]) - 48 - 65 + c.cobit - 26
+        if num > 0 {
+            encode = string(alphabet[num])
+        }
+        encode = string(alphabet[num+26])
+    }
+
+    return encode
 }
 
-func (c *codeObfuscate) coalgo3(code string) string {
-    // TODO
-    return code
+// coalgo2 encoding the code string with ordinary offset
+// transform, but mapped with special characters like _.
+func (c *codeObfuscate) coalgo3(code string) []string {
+    var alphabetu map[int]rune
+    var alphabetl map[int]rune
+
+    upper := 0
+    lower := 0
+    specChar := []string{"_", "-"}
+
+    for i, _ := range code {
+        if unicode.IsUpper((rune)(code[i])) {
+            upper++
+        } else if unicode.IsLower((rune)(code[i])) {
+            lower++
+        }
+    }
+
+    if upper > lower {
+        strings.ToUpper(code)
+        for i := 0; i < 26; i++ {
+            for j := 'A'; j <= 'Z'; j++ {
+                alphabetu[i] = j
+            }
+        }
+    }
+    strings.ToLower(code)
+    for i := 0; i < 26; i++ {
+        for j := 'a'; j <= 'z'; j++ {
+            alphabetl[i] = j
+        }
+    }
+
+    // this flow converts char to _ or - in code. If we only
+    // use _ and - without other identifiers then we cannot
+    // recognize what exactly alphabet is represent, so we
+    // need some different identifiers to distinguish the code,
+    // just like _ represents a, then 2_ represents b instead
+    // of __.
+    var newer []string
+    for i := 0; i < 26; i++ {
+        if i < c.cobit {
+            newer[i] = specChar[0] + string(i + 1)
+        }
+        newer[i] = specChar[1] + string(i % c.cobit) + specChar[0] + string(i + 1)
+    }
+
+    for k, _ := range code {
+        n := (int)(code[k]) - 48 - 97
+        newer = append(newer, newer[n])
+    }
+    return newer
 }
 
 func (c *codeObfuscate) processFile(f *os.File) *os.File {
@@ -153,7 +247,7 @@ func (c *codeDeobfuscate) process(code string) {
             if c.checkID(c.algoid) {
                 c.Deobfuscate(code, c.algoid)
             } else {
-                log.Fatalf("wrong encoding number.")
+                log.Fatalf("wrong decoding number.")
             }
         }
     } else {
