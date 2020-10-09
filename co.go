@@ -4,7 +4,6 @@ import (
     "os"
     "io"
     "strings"
-    //"strconv"
     "unicode"
 
     log "github.com/sirupsen/logrus"
@@ -37,6 +36,7 @@ type confuser interface {
     Init()
     checkStatus(status string) bool
     checkID(id int) bool
+    caseTransform(code string)
     processFile(f *os.File) *os.File
     process(code string)
 
@@ -65,6 +65,7 @@ func (c *Confuse) New() *Confuse {
     return co
 }
 
+// TODO: please ensure input what exactly do?
 func (c *Confuse) Init() {
     if c.input == nil {
         c.status = NO
@@ -73,6 +74,7 @@ func (c *Confuse) Init() {
     }
     if c.checkStatus(c.status) {
         c.algoed = true
+        c.algoid = 3
         c.cobit  = 8
     }
 }
@@ -89,6 +91,37 @@ func (c *Confuse) checkID(id int) bool {
         return true
     }
     return false
+}
+
+func (c *Confuse) caseTransform(code string) {
+    var alphabetu map[int]rune
+    var alphabetl map[int]rune
+
+    upper := 0
+    lower := 0
+
+    for i, _ := range code {
+        if unicode.IsUpper((rune)(code[i])) {
+            upper++
+        } else if unicode.IsLower((rune)(code[i])) {
+            lower++
+        }
+    }
+
+    if upper > lower {
+        strings.ToUpper(code)
+        for i := 0; i < 26; i++ {
+            for j := 'A'; j <= 'Z'; j++ {
+                alphabetu[i] = j
+            }
+        }
+    }
+    strings.ToLower(code)
+    for i := 0; i < 26; i++ {
+        for j := 'a'; j <= 'z'; j++ {
+            alphabetl[i] = j
+        }
+    }
 }
 
 func (c *codeObfuscate) process(code string) {
@@ -129,6 +162,7 @@ func (c *codeObfuscate) Coalgo(id int, code string) {
     }
 }
 
+// TODO: refactor coalgo1 and coalgo2, maybe incorporate them into one.
 // coalgo1 encoding the code string with ordinary offset
 // transform, which means map alphabet to next n alphabet
 // with all lower case.
@@ -181,38 +215,11 @@ func (c *codeObfuscate) coalgo2(code string) string {
     return encode
 }
 
-// coalgo2 encoding the code string with ordinary offset
+// coalgo3 encoding the code string with ordinary offset
 // transform, but mapped with special characters like _.
 func (c *codeObfuscate) coalgo3(code string) []string {
-    var alphabetu map[int]rune
-    var alphabetl map[int]rune
-
-    upper := 0
-    lower := 0
     specChar := []string{"_", "-"}
-
-    for i, _ := range code {
-        if unicode.IsUpper((rune)(code[i])) {
-            upper++
-        } else if unicode.IsLower((rune)(code[i])) {
-            lower++
-        }
-    }
-
-    if upper > lower {
-        strings.ToUpper(code)
-        for i := 0; i < 26; i++ {
-            for j := 'A'; j <= 'Z'; j++ {
-                alphabetu[i] = j
-            }
-        }
-    }
-    strings.ToLower(code)
-    for i := 0; i < 26; i++ {
-        for j := 'a'; j <= 'z'; j++ {
-            alphabetl[i] = j
-        }
-    }
+    c.caseTransform(code)
 
     // this flow converts char to _ or - in code. If we only
     // use _ and - without other identifiers then we cannot
@@ -228,11 +235,12 @@ func (c *codeObfuscate) coalgo3(code string) []string {
         newer[i] = specChar[1] + string(i % c.cobit) + specChar[0] + string(i + 1)
     }
 
+    var ret []string
     for k, _ := range code {
         n := (int)(code[k]) - 48 - 97
-        newer = append(newer, newer[n])
+        ret = append(ret, newer[n])
     }
-    return newer
+    return ret
 }
 
 func (c *codeObfuscate) processFile(f *os.File) *os.File {
@@ -279,13 +287,51 @@ func (c *codeDeobfuscate) Dealgo(id int, code string) {
 }
 
 func (c *codeDeobfuscate) dealgo1(code string) string {
-    // TODO
-    return code
+    var decode string
+    var alphabet map[int]rune
+
+    for i := 0; i < 26; i++ {
+        for j := 'i'; j <= 'r'; j++ {
+            alphabet[i] = j
+        }
+        for k := 'a'; k <= 'h'; k++ {
+            alphabet[i] = k
+        }
+    }
+
+    for i, _ := range code {
+        num := (int)(code[i]) + 48 + 97 - c.cobit + 26
+        if num > 26 {
+            decode = string(alphabet[num-26])
+        }
+        decode = string(alphabet[num])
+    }
+
+    return decode
 }
 
 func (c *codeDeobfuscate) dealgo2(code string) string {
-    // TODO
-    return code
+    var decode string
+    var alphabet map[int]rune
+
+    for i := 0; i < 26; i++ {
+        for j := 'I'; j <= 'R'; j++ {
+            alphabet[i] = j
+        }
+        for k := 'A'; k <= 'H'; k++ {
+            alphabet[i] = k
+        }
+    }
+
+    for i, _ := range code {
+        num := (int)(code[i]) + 48 + 65 - c.cobit + 26
+        if num > 26 {
+            decode = string(alphabet[num-26])
+        }
+        decode = string(alphabet[num])
+    }
+
+    return decode
 }
 
 func (c *codeDeobfuscate) dealgo3(code string) string {
