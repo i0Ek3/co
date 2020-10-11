@@ -1,4 +1,4 @@
-module co
+module github.com/i0Ek3/co
 
 go 1.15
 
