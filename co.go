@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strings"
@@ -326,17 +325,22 @@ func (c *Confuse) processFileDE(f *os.File) *os.File {
 }
 
 func main() {
-	inputReader := bufio.NewReader(os.Stdin)
+	var input string
+	var code string
+Again:
 	fmt.Printf("Please input OB for obfuscation or DE for deobfuscation: ")
-	input, err := inputReader.ReadString('\n')
-	if err != nil {
-		panic(err)
-	}
+	fmt.Scan(&input)
 
+	if input != "OB" && input != "DE" {
+		log.Warnf("None of OB or DE, please input again!")
+		goto Again
+	}
 	co := &Confuse{input, true, 3, 8}
-	fmt.Println("Please input the code string: ")
-	code, err := inputReader.ReadString('\n')
-	if input == OB {
+
+	fmt.Printf("Please input the code string: ")
+	fmt.Scan(&code)
+
+	if input == "OB" {
 		co.processOB(code)
 	}
 	co.processDE(code)
