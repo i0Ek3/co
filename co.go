@@ -22,7 +22,7 @@ type Confuse struct {
     algoid int
     cobit  int
 }
-
+ 
 type codeObfuscate struct {
     Confuse
 }

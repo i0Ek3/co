@@ -1,6 +1,6 @@
 # co
 
-`co` is a Go tool to obfuscate the code, so we call it co(code obfuscation). But for now, co just support simple code obfuscation with my own encoding algorithm.
+`co` is a Go tool to obfuscate/deobfuscate the code, there are three algorithms you can choose to obfuscate/deobfuscate. But for now, co just support simple code obfuscation/deobfuscation with my own encoding/decoding algorithm, we'll add some complicated encoding/decoding algorithms later.
 
 - basic code obfuscation/deobfuscation
 - customize encoding/decoding algorithm
@@ -21,10 +21,11 @@ import (
 
 func main() {
     ...
+    co.process(code)
     co.Obfuscate(algoid)
-    //co.Obfuscate(os.File)
+    //co.Obfuscate(file)
     co.Deobfuscate(algoid)
-    //co.Deobfuscate(os.File)
+    //co.Deobfuscate(file)
 }
 ```
 
