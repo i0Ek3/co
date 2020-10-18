@@ -27,6 +27,7 @@ type confuser interface {
 	checkStatus(status string) bool
 	checkID(id int) bool
 	caseTransform(code string)
+	isCodeEmpty(code string) bool
 
 	// for code obfuscate
 	processOB(code string)
@@ -102,21 +103,31 @@ func (c *Confuse) caseTransform(code string) {
 	}
 }
 
-// TODO: check code if empty and invalid
+func (c *Confuse) isCodeEmpty(code string) bool {
+	switch {
+	case code == "":
+		return false
+	default:
+		return true
+	}
+}
+
 func (c *Confuse) processOB(code string) {
-	if c.algoed && c.checkStatus(c.status) {
-		switch c.status {
-		case OB:
-			if c.checkID(c.algoid) {
-				c.Obfuscate(code, c.algoid)
-			} else {
-				log.Fatalf("wrong encoding number.")
+	if c.isCodeEmpty(code) {
+		if c.algoed && c.checkStatus(c.status) {
+			switch c.status {
+			case OB:
+				if c.checkID(c.algoid) {
+					c.Obfuscate(code, c.algoid)
+				} else {
+					log.Fatalf("wrong encoding number.")
+				}
 			}
-		}
-	} else {
-		switch c.status {
-		case OB:
-			c.Obfuscate(code)
+		} else {
+			switch c.status {
+			case OB:
+				c.Obfuscate(code)
+			}
 		}
 	}
 }
@@ -227,21 +238,22 @@ func (c *Confuse) processFileOB(f *os.File) *os.File {
 	return f
 }
 
-// TODO: check code if empty and invalid
 func (c *Confuse) processDE(code string) {
-	if c.algoed && c.checkStatus(c.status) {
-		switch c.status {
-		case DE:
-			if c.checkID(c.algoid) {
-				c.Deobfuscate(code, c.algoid)
-			} else {
-				log.Fatalf("wrong decoding number.")
+	if c.isCodeEmpty(code) {
+		if c.algoed && c.checkStatus(c.status) {
+			switch c.status {
+			case DE:
+				if c.checkID(c.algoid) {
+					c.Deobfuscate(code, c.algoid)
+				} else {
+					log.Fatalf("wrong decoding number.")
+				}
 			}
-		}
-	} else {
-		switch c.status {
-		case DE:
-			c.Deobfuscate(code)
+		} else {
+			switch c.status {
+			case DE:
+				c.Deobfuscate(code)
+			}
 		}
 	}
 }
