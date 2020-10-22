@@ -9,12 +9,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// code confuse operations
 const (
 	OB = "obfuscate"
 	DE = "deobfuscate"
 	NO = ""
 )
 
+// Confuse defines code confuse fileds
 type Confuse struct {
 	status string
 	algoed bool
@@ -22,6 +24,7 @@ type Confuse struct {
 	cobit  int
 }
 
+// confuser defines code confuse interface
 type confuser interface {
 	New() *Confuse
 	checkStatus(status string) bool
@@ -48,6 +51,7 @@ type confuser interface {
 	processFileDE(f *os.File) *os.File
 }
 
+// New creates new code confuse instance
 func (c *Confuse) New() *Confuse {
 	co := &Confuse{
 		status: c.status,
@@ -132,6 +136,7 @@ func (c *Confuse) processOB(code string) {
 	}
 }
 
+// Obfuscate obfuscates the code
 func (c *Confuse) Obfuscate(code string, id ...int) {
 	if len(id) > 0 {
 		c.algoid = id[0]
@@ -141,6 +146,7 @@ func (c *Confuse) Obfuscate(code string, id ...int) {
 	}
 }
 
+// Coalgo defines code obfuscation algorithms
 func (c *Confuse) Coalgo(id int, code string) {
 	switch id {
 	case 1:
@@ -258,6 +264,7 @@ func (c *Confuse) processDE(code string) {
 	}
 }
 
+// Deobfuscate deobfuscates the code
 func (c *Confuse) Deobfuscate(code string, id ...int) {
 	if len(id) > 0 {
 		c.algoid = id[0]
@@ -267,6 +274,7 @@ func (c *Confuse) Deobfuscate(code string, id ...int) {
 	}
 }
 
+// Dealgo defines code deobfuscation algorithms
 func (c *Confuse) Dealgo(id int, code string) {
 	switch id {
 	case 1:
