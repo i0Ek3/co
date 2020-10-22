@@ -35,7 +35,7 @@ type confuser interface {
 	// for code obfuscate
 	processOB(code string)
 	Obfuscate(code string, id ...int)
-	Coalgo(id int, code []string)
+	coalgo(id int, code []string)
 	coalgo1(code string) string
 	coalgo2(code string) string
 	coalgo3(code string) []string
@@ -44,7 +44,7 @@ type confuser interface {
 	// for code deobfuscate
 	processDE(code string)
 	Deobfuscate(code string, id ...int)
-	Dealgo(id int, code []string)
+	dealgo(id int, code []string)
 	dealgo1(code string) string
 	dealgo2(code string) string
 	dealgo3(code string) string
@@ -141,13 +141,13 @@ func (c *Confuse) Obfuscate(code string, id ...int) {
 	if len(id) > 0 {
 		c.algoid = id[0]
 		if c.checkID(c.algoid) {
-			c.Coalgo(c.algoid, code)
+			c.coalgo(c.algoid, code)
 		}
 	}
 }
 
-// Coalgo defines code obfuscation algorithms
-func (c *Confuse) Coalgo(id int, code string) {
+// coalgo defines code obfuscation algorithms
+func (c *Confuse) coalgo(id int, code string) {
 	switch id {
 	case 1:
 		c.coalgo1(code)
@@ -269,13 +269,13 @@ func (c *Confuse) Deobfuscate(code string, id ...int) {
 	if len(id) > 0 {
 		c.algoid = id[0]
 		if c.checkID(c.algoid) {
-			c.Dealgo(c.algoid, code)
+			c.dealgo(c.algoid, code)
 		}
 	}
 }
 
-// Dealgo defines code deobfuscation algorithms
-func (c *Confuse) Dealgo(id int, code string) {
+// dealgo defines code deobfuscation algorithms
+func (c *Confuse) dealgo(id int, code string) {
 	switch id {
 	case 1:
 		c.dealgo1(code)

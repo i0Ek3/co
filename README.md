@@ -21,10 +21,8 @@ import (
 
 func main() {
     ...
-    co.processOB(code)
-    //co.Obfuscate(file)
-    co.processDE(code)
-    //co.Deobfuscate(file)
+    co.Obfuscate(code)
+    co.Deobfuscate(code)
 }
 ```
 

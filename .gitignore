@@ -2,3 +2,4 @@
 .co.go
 .main.go
 co
+*_test.go
