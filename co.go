@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"io/ioutil"
 	"strings"
 	"unicode"
 
@@ -30,25 +30,25 @@ type confuser interface {
 	checkStatus(status string) bool
 	checkID(id int) bool
 	caseTransform(code string)
-	isCodeEmpty(code string) bool
+	isCodeEmpty(code string) (ok bool)
 
 	// for code obfuscate
 	processOB(code string)
 	Obfuscate(code string, id ...int)
-	coalgo(id int, code []string)
+	coalgo(id int, code string) (newdata string)
 	coalgo1(code string) string
 	coalgo2(code string) string
-	coalgo3(code string) []string
-	processFileOB(f *os.File) *os.File
+	coalgo3(code string) string
+	processFileOB(filename string, algoid int) string
 
 	// for code deobfuscate
 	processDE(code string)
 	Deobfuscate(code string, id ...int)
-	dealgo(id int, code []string)
+	dealgo(id int, code string) (newdata string)
 	dealgo1(code string) string
 	dealgo2(code string) string
 	dealgo3(code string) string
-	processFileDE(f *os.File) *os.File
+	processFileDE(filename string, algoid int) string
 }
 
 // New creates new code confuse instance
@@ -107,17 +107,17 @@ func (c *Confuse) caseTransform(code string) {
 	}
 }
 
+// FIXME
 func (c *Confuse) isCodeEmpty(code string) bool {
-	switch {
-	case code == "":
+	if code == "" || code == "\n" {
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
-func (c *Confuse) processOB(code string) {
+func (c *Confuse) processOB(code string) (ok bool) {
 	if c.isCodeEmpty(code) {
+		ok = true
 		if c.algoed && c.checkStatus(c.status) {
 			switch c.status {
 			case OB:
@@ -134,6 +134,7 @@ func (c *Confuse) processOB(code string) {
 			}
 		}
 	}
+	return ok == true
 }
 
 // Obfuscate obfuscates the code
@@ -147,15 +148,16 @@ func (c *Confuse) Obfuscate(code string, id ...int) {
 }
 
 // coalgo defines code obfuscation algorithms
-func (c *Confuse) coalgo(id int, code string) {
+func (c *Confuse) coalgo(id int, code string) (newdata string) {
 	switch id {
 	case 1:
-		c.coalgo1(code)
+		newdata = c.coalgo1(code)
 	case 2:
-		c.coalgo2(code)
+		newdata = c.coalgo2(code)
 	case 3:
-		c.coalgo3(code)
+		newdata = c.coalgo3(code)
 	}
+	return
 }
 
 // TODO: refactor coalgo1 and coalgo2, maybe incorporate them into one.
@@ -213,7 +215,7 @@ func (c *Confuse) coalgo2(code string) string {
 
 // coalgo3 encoding the code string with ordinary offset
 // transform, but mapped with special characters like _.
-func (c *Confuse) coalgo3(code string) []string {
+func (c *Confuse) coalgo3(code string) string {
 	specChar := []string{"_", "-"}
 	c.caseTransform(code)
 
@@ -231,21 +233,31 @@ func (c *Confuse) coalgo3(code string) []string {
 		newer[i] = specChar[1] + string(i%c.cobit) + specChar[0] + string(i+1)
 	}
 
-	var ret []string
+	var ret string
 	for k, _ := range code {
 		n := (int)(code[k]) - 48 - 97
-		ret = append(ret, newer[n])
+		ret += newer[n]
 	}
 	return ret
 }
 
-func (c *Confuse) processFileOB(f *os.File) *os.File {
-	// TODO
-	return f
+// TODO: finish file invocation
+func (c *Confuse) processFileOB(filename string, algoid int) string {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatalf("file read failed.")
+	}
+	name := "co" + string(algoid) + "_" + filename
+	newdata := c.coalgo(algoid, string(data))
+	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
+		log.Fatalf("file write failed.")
+	}
+	return newdata
 }
 
-func (c *Confuse) processDE(code string) {
+func (c *Confuse) processDE(code string) (ok bool) {
 	if c.isCodeEmpty(code) {
+		ok = true
 		if c.algoed && c.checkStatus(c.status) {
 			switch c.status {
 			case DE:
@@ -262,6 +274,7 @@ func (c *Confuse) processDE(code string) {
 			}
 		}
 	}
+	return ok == true
 }
 
 // Deobfuscate deobfuscates the code
@@ -275,15 +288,16 @@ func (c *Confuse) Deobfuscate(code string, id ...int) {
 }
 
 // dealgo defines code deobfuscation algorithms
-func (c *Confuse) dealgo(id int, code string) {
+func (c *Confuse) dealgo(id int, code string) (newdata string) {
 	switch id {
 	case 1:
-		c.dealgo1(code)
+		newdata = c.dealgo1(code)
 	case 2:
-		c.dealgo2(code)
+		newdata = c.dealgo2(code)
 	case 3:
-		c.dealgo3(code)
+		newdata = c.dealgo3(code)
 	}
+	return
 }
 
 func (c *Confuse) dealgo1(code string) string {
@@ -339,9 +353,18 @@ func (c *Confuse) dealgo3(code string) string {
 	return code
 }
 
-func (c *Confuse) processFileDE(f *os.File) *os.File {
-	// TODO
-	return f
+// TODO: finish file invocation
+func (c *Confuse) processFileDE(filename string, algoid int) string {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatalf("file read failed.")
+	}
+	name := "de" + string(algoid) + "_" + filename
+	newdata := c.dealgo(algoid, string(data))
+	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
+		log.Fatalf("file write failed.")
+	}
+	return newdata
 }
 
 func main() {
@@ -357,11 +380,24 @@ Again:
 	}
 	co := &Confuse{input, true, 3, 8}
 
-	fmt.Printf("Please input the code string: ")
+	fmt.Printf("Please input the corresponding code string: ")
 	fmt.Scan(&code)
 
-	if input == "OB" {
-		co.processOB(code)
+	switch input {
+	case "OB":
+		if co.processOB(code) {
+			fmt.Println("Done, code obfuscatation finished!")
+		} else {
+			log.Warnf("code cannot obfuscated!")
+		}
+
+	case "DE":
+		if co.processDE(code) {
+			fmt.Println("Done, code deobfuscatation finished!")
+		} else {
+			log.Warnf("code cannot deobfuscated!")
+		}
+
+	default:
 	}
-	co.processDE(code)
 }

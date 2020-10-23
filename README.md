@@ -4,7 +4,7 @@
 
 - basic code obfuscation/deobfuscation
 - customize encoding/decoding algorithm
-- file obfuscation/deobfuscation(not implement yet)
+- file obfuscation/deobfuscation
 
 ## Install
 
