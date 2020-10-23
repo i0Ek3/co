@@ -77,8 +77,8 @@ func (c *Confuse) checkID(id int) bool {
 }
 
 func (c *Confuse) caseTransform(code string) {
-	var alphabetu map[int]rune
-	var alphabetl map[int]rune
+	alphabetu := make(map[int]rune, 26)
+	alphabetl := make(map[int]rune, 26)
 
 	upper := 0
 	lower := 0
@@ -225,17 +225,18 @@ func (c *Confuse) coalgo3(code string) string {
 	// need some different identifiers to distinguish the code,
 	// just like _ represents a, then 2_ represents b instead
 	// of __.
-	var newer []string
+	newer := make([]string, 26)
 	for i := 0; i < 26; i++ {
 		if i < c.cobit {
-			newer[i] = specChar[0] + string(i+1)
+			newer[i] = specChar[0] + fmt.Sprint(i+1)
 		}
-		newer[i] = specChar[1] + string(i%c.cobit) + specChar[0] + string(i+1)
+		newer[i] = specChar[1] + fmt.Sprint(i%c.cobit) + specChar[0] + fmt.Sprint(i+1)
 	}
 
 	var ret string
 	for k, _ := range code {
-		n := (int)(code[k]) - 48 - 97
+		//n := (int)(code[k]) - 48 - 97
+		n := (int)(code[k]) - 97 + 1
 		ret += newer[n]
 	}
 	return ret
@@ -247,7 +248,7 @@ func (c *Confuse) processFileOB(filename string, algoid int) string {
 	if err != nil {
 		log.Fatalf("file read failed.")
 	}
-	name := "co" + string(algoid) + "_" + filename
+	name := "co" + fmt.Sprint(algoid) + "_" + filename
 	newdata := c.coalgo(algoid, string(data))
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		log.Fatalf("file write failed.")
@@ -359,7 +360,7 @@ func (c *Confuse) processFileDE(filename string, algoid int) string {
 	if err != nil {
 		log.Fatalf("file read failed.")
 	}
-	name := "de" + string(algoid) + "_" + filename
+	name := "de" + fmt.Sprint(algoid) + "_" + filename
 	newdata := c.dealgo(algoid, string(data))
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		log.Fatalf("file write failed.")

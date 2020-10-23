@@ -21,8 +21,8 @@ import (
 
 func main() {
     ...
-    co.Obfuscate(code)
-    co.Deobfuscate(code)
+    co.Obfuscate("code")
+    co.Deobfuscate("code")
 }
 ```
 
