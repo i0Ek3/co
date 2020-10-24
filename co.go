@@ -14,6 +14,8 @@ const (
 	OB = "obfuscate"
 	DE = "deobfuscate"
 	NO = ""
+
+	AN = 26 // alphabets number
 )
 
 // Confuse defines code confuse fileds
@@ -77,8 +79,8 @@ func (c *Confuse) checkID(id int) bool {
 }
 
 func (c *Confuse) caseTransform(code string) {
-	alphabetu := make(map[int]rune, 26)
-	alphabetl := make(map[int]rune, 26)
+	alphabetu := make(map[int]rune, AN)
+	alphabetl := make(map[int]rune, AN)
 
 	upper := 0
 	lower := 0
@@ -93,14 +95,14 @@ func (c *Confuse) caseTransform(code string) {
 
 	if upper > lower {
 		strings.ToUpper(code)
-		for i := 0; i < 26; i++ {
+		for i := 0; i < AN; i++ {
 			for j := 'A'; j <= 'Z'; j++ {
 				alphabetu[i] = j
 			}
 		}
 	}
 	strings.ToLower(code)
-	for i := 0; i < 26; i++ {
+	for i := 0; i < AN; i++ {
 		for j := 'a'; j <= 'z'; j++ {
 			alphabetl[i] = j
 		}
@@ -160,7 +162,6 @@ func (c *Confuse) coalgo(id int, code string) (newdata string) {
 	return
 }
 
-// TODO: refactor coalgo1 and coalgo2, maybe incorporate them into one.
 // coalgo1 encoding the code string with ordinary offset
 // transform, which means map alphabet to next n alphabet
 // with all lower case.
@@ -170,18 +171,18 @@ func (c *Confuse) coalgo1(code string) string {
 
 	encode = strings.ToLower(code)
 
-	for i := 0; i < 26; i++ {
+	for i := 0; i < AN; i++ {
 		for j := 'a'; j <= 'z'; j++ {
 			alphabet[i] = j
 		}
 	}
 
 	for i, _ := range code {
-		num := (int)(code[i]) - 48 - 97 + c.cobit - 26
+		num := (int)(code[i]) - 48 - 97 + c.cobit - AN
 		if num > 0 {
 			encode = string(alphabet[num])
 		}
-		encode = string(alphabet[num+26])
+		encode = string(alphabet[num+AN])
 	}
 
 	return encode
@@ -196,18 +197,18 @@ func (c *Confuse) coalgo2(code string) string {
 
 	encode = strings.ToUpper(code)
 
-	for i := 0; i < 26; i++ {
+	for i := 0; i < AN; i++ {
 		for j := 'A'; j <= 'Z'; j++ {
 			alphabet[i] = j
 		}
 	}
 
 	for i, _ := range code {
-		num := (int)(code[i]) - 48 - 65 + c.cobit - 26
+		num := (int)(code[i]) - 48 - 65 + c.cobit - AN
 		if num > 0 {
 			encode = string(alphabet[num])
 		}
-		encode = string(alphabet[num+26])
+		encode = string(alphabet[num+AN])
 	}
 
 	return encode
@@ -225,8 +226,8 @@ func (c *Confuse) coalgo3(code string) string {
 	// need some different identifiers to distinguish the code,
 	// just like _ represents a, then 2_ represents b instead
 	// of __.
-	newer := make([]string, 26)
-	for i := 0; i < 26; i++ {
+	newer := make([]string, AN)
+	for i := 0; i < AN; i++ {
 		if i < c.cobit {
 			newer[i] = specChar[0] + fmt.Sprint(i+1)
 		}
@@ -305,7 +306,7 @@ func (c *Confuse) dealgo1(code string) string {
 	var decode string
 	var alphabet map[int]rune
 
-	for i := 0; i < 26; i++ {
+	for i := 0; i < AN; i++ {
 		for j := 'i'; j <= 'r'; j++ {
 			alphabet[i] = j
 		}
@@ -315,9 +316,9 @@ func (c *Confuse) dealgo1(code string) string {
 	}
 
 	for i, _ := range code {
-		num := (int)(code[i]) + 48 + 97 - c.cobit + 26
-		if num > 26 {
-			decode = string(alphabet[num-26])
+		num := (int)(code[i]) + 48 + 97 - c.cobit + AN
+		if num > AN {
+			decode = string(alphabet[num-AN])
 		}
 		decode = string(alphabet[num])
 	}
@@ -329,7 +330,7 @@ func (c *Confuse) dealgo2(code string) string {
 	var decode string
 	var alphabet map[int]rune
 
-	for i := 0; i < 26; i++ {
+	for i := 0; i < AN; i++ {
 		for j := 'I'; j <= 'R'; j++ {
 			alphabet[i] = j
 		}
@@ -339,9 +340,9 @@ func (c *Confuse) dealgo2(code string) string {
 	}
 
 	for i, _ := range code {
-		num := (int)(code[i]) + 48 + 65 - c.cobit + 26
-		if num > 26 {
-			decode = string(alphabet[num-26])
+		num := (int)(code[i]) + 48 + 65 - c.cobit + AN
+		if num > AN {
+			decode = string(alphabet[num-AN])
 		}
 		decode = string(alphabet[num])
 	}
@@ -376,7 +377,7 @@ Again:
 	fmt.Scan(&input)
 
 	if input != "OB" && input != "DE" {
-		log.Warnf("None of OB or DE, please input again!")
+		log.Warnf("none of OB or DE, please input again!")
 		goto Again
 	}
 	co := &Confuse{input, true, 3, 8}
@@ -384,17 +385,20 @@ Again:
 	fmt.Printf("Please input the corresponding code string: ")
 	fmt.Scan(&code)
 
+	//var c confuser
 	switch input {
 	case "OB":
 		if co.processOB(code) {
-			fmt.Println("Done, code obfuscatation finished!")
+			//fmt.Printf("Code obfuscatation finished, encoding to: %v", c.coalgo3(code))
+			fmt.Println("Code obfuscated!")
 		} else {
 			log.Warnf("code cannot obfuscated!")
 		}
 
 	case "DE":
 		if co.processDE(code) {
-			fmt.Println("Done, code deobfuscatation finished!")
+			//fmt.Printf("Code deobfuscatation finished, encoding to: %v", c.dealgo3(code))
+			fmt.Println("Code deobfuscated!")
 		} else {
 			log.Warnf("code cannot deobfuscated!")
 		}
