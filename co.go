@@ -31,7 +31,7 @@ type confuser interface {
 	New() *Confuse
 	checkStatus(status string) bool
 	checkID(id int) bool
-	caseTransform(code string)
+	caseTransform(code string, mode ...string)
 	isCodeEmpty(code string) (ok bool)
 
 	// for code obfuscate
@@ -78,33 +78,51 @@ func (c *Confuse) checkID(id int) bool {
 	return false
 }
 
-func (c *Confuse) caseTransform(code string) {
+func (c *Confuse) caseTransform(code string, mode ...string) {
 	alphabetu := make(map[int]rune, AN)
 	alphabetl := make(map[int]rune, AN)
 
 	upper := 0
 	lower := 0
-
-	for i, _ := range code {
-		if unicode.IsUpper((rune)(code[i])) {
-			upper++
-		} else if unicode.IsLower((rune)(code[i])) {
-			lower++
-		}
-	}
-
-	if upper > lower {
-		strings.ToUpper(code)
-		for i := 0; i < AN; i++ {
-			for j := 'A'; j <= 'Z'; j++ {
-				alphabetu[i] = j
+	if len(mode) == 0 {
+		for i, _ := range code {
+			if unicode.IsUpper((rune)(code[i])) {
+				upper++
+			} else if unicode.IsLower((rune)(code[i])) {
+				lower++
 			}
 		}
-	}
-	strings.ToLower(code)
-	for i := 0; i < AN; i++ {
-		for j := 'a'; j <= 'z'; j++ {
-			alphabetl[i] = j
+
+		if upper > lower {
+			strings.ToUpper(code)
+			for i := 0; i < AN; i++ {
+				for j := 'A'; j <= 'Z'; j++ {
+					alphabetu[i] = j
+				}
+			}
+		} else {
+			strings.ToLower(code)
+			for i := 0; i < AN; i++ {
+				for j := 'a'; j <= 'z'; j++ {
+					alphabetl[i] = j
+				}
+			}
+		}
+	} else {
+		if mode[0] == "lower" {
+			strings.ToLower(code)
+			for i := 0; i < AN; i++ {
+				for j := 'a'; j <= 'z'; j++ {
+					alphabetl[i] = j
+				}
+			}
+		} else if mode[0] == "upper" {
+			strings.ToUpper(code)
+			for i := 0; i < AN; i++ {
+				for j := 'A'; j <= 'Z'; j++ {
+					alphabetu[i] = j
+				}
+			}
 		}
 	}
 }
@@ -218,7 +236,8 @@ func (c *Confuse) coalgo2(code string) string {
 // transform, but mapped with special characters like _.
 func (c *Confuse) coalgo3(code string) string {
 	specChar := []string{"_", "-"}
-	c.caseTransform(code)
+	mode := "lower"
+	c.caseTransform(code, mode)
 
 	// this flow converts char to _ or - in code. If we only
 	// use _ and - without other identifiers then we cannot
@@ -235,22 +254,27 @@ func (c *Confuse) coalgo3(code string) string {
 	}
 
 	var ret string
-	for k, _ := range code {
+	for _, v := range code {
+		// FIXME: Normally, after coversion, all letter will be lower.
+		// And h become 104, 104-97+1=8. But here always indicate n is
+		// out range of index, that's so weird.
 		//n := (int)(code[k]) - 48 - 97
-		n := (int)(code[k]) - 97 + 1
+		n := int(v) - 97 + 1
 		ret += newer[n]
 	}
 	return ret
 }
 
-// TODO: finish file invocation
 func (c *Confuse) processFileOB(filename string, algoid int) string {
+	var newdata string
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("file read failed.")
 	}
+
 	name := "co" + fmt.Sprint(algoid) + "_" + filename
-	newdata := c.coalgo(algoid, string(data))
+	newdata = c.coalgo(algoid, string(data))
+
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		log.Fatalf("file write failed.")
 	}
@@ -355,7 +379,6 @@ func (c *Confuse) dealgo3(code string) string {
 	return code
 }
 
-// TODO: finish file invocation
 func (c *Confuse) processFileDE(filename string, algoid int) string {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -370,39 +393,75 @@ func (c *Confuse) processFileDE(filename string, algoid int) string {
 }
 
 func main() {
-	var input string
-	var code string
+	var (
+		input    string
+		inputO   string
+		filename string
+		code     string
+	)
+
+	co := &Confuse{input, true, 3, 8}
+
 Again:
 	fmt.Printf("Please input OB for obfuscation or DE for deobfuscation: ")
-	fmt.Scan(&input)
-
-	if input != "OB" && input != "DE" {
+	fmt.Scan(&inputO)
+	if inputO != "OB" && inputO != "DE" {
 		log.Warnf("none of OB or DE, please input again!")
 		goto Again
 	}
-	co := &Confuse{input, true, 3, 8}
 
-	fmt.Printf("Please input the corresponding code string: ")
-	fmt.Scan(&code)
-
-	//var c confuser
-	switch input {
+	switch inputO {
 	case "OB":
-		if co.processOB(code) {
-			//fmt.Printf("Code obfuscatation finished, encoding to: %v", c.coalgo3(code))
-			fmt.Println("Code obfuscated!")
-		} else {
-			log.Warnf("code cannot obfuscated!")
-		}
+		fmt.Printf("Which option you want to obfuscate/deobfuscate: [code or file]: ")
+		fmt.Scan(&input)
 
+		switch input {
+		case "code":
+			fmt.Printf("Please input the code string: ")
+			fmt.Scan(&code)
+
+			if co.processOB(code) {
+				fmt.Println("Code obfuscated!")
+			} else {
+				log.Warnf("code cannot obfuscated!")
+			}
+		case "file":
+			fmt.Printf("Please input filename: ")
+			fmt.Scan(&filename)
+
+			if filename != "" {
+				co.processFileOB(filename, co.algoid)
+				log.Infof("file obfuscated.")
+			} else {
+				log.Warnf("invalid filename!")
+			}
+		}
 	case "DE":
-		if co.processDE(code) {
-			//fmt.Printf("Code deobfuscatation finished, encoding to: %v", c.dealgo3(code))
-			fmt.Println("Code deobfuscated!")
-		} else {
-			log.Warnf("code cannot deobfuscated!")
-		}
+		fmt.Printf("Which option you want to obfuscate/deobfuscate: [code or file]: ")
+		fmt.Scan(&input)
 
+		switch input {
+		case "code":
+			fmt.Printf("Please input the code string: ")
+			fmt.Scan(&code)
+
+			if co.processDE(code) {
+				fmt.Println("Code deobfuscated!")
+			} else {
+				log.Warnf("code cannot deobfuscated!")
+			}
+		case "file":
+			fmt.Printf("Please input filename: ")
+			fmt.Scan(&filename)
+
+			if filename != "" {
+				co.processFileDE(filename, co.algoid)
+				log.Infof("file deobfuscated.")
+			} else {
+				log.Warnf("invalid filename!")
+			}
+		}
 	default:
+
 	}
 }
