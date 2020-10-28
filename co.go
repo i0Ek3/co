@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"strings"
 	"unicode"
 
@@ -41,6 +42,7 @@ type confuser interface {
 	coalgo1(code string) string
 	coalgo2(code string) string
 	coalgo3(code string) string
+	parseEncodeIntoFile(code string, algoid int) bool
 	processFileOB(filename string, algoid int) string
 
 	// for code deobfuscate
@@ -50,6 +52,7 @@ type confuser interface {
 	dealgo1(code string) string
 	dealgo2(code string) string
 	dealgo3(code string) string
+	parseDecodeIntoFile(code string, algoid int) bool
 	processFileDE(filename string, algoid int) string
 }
 
@@ -162,7 +165,9 @@ func (c *Confuse) Obfuscate(code string, id ...int) {
 	if len(id) > 0 {
 		c.algoid = id[0]
 		if c.checkID(c.algoid) {
-			c.coalgo(c.algoid, code)
+			go func() {
+				c.coalgo(c.algoid, code)
+			}()
 		}
 	}
 }
@@ -185,7 +190,7 @@ func (c *Confuse) coalgo(id int, code string) (newdata string) {
 // with all lower case.
 func (c *Confuse) coalgo1(code string) string {
 	var encode string
-	var alphabet map[int]rune
+	alphabet := make(map[int]rune)
 
 	encode = strings.ToLower(code)
 
@@ -211,7 +216,7 @@ func (c *Confuse) coalgo1(code string) string {
 // with all upper case.
 func (c *Confuse) coalgo2(code string) string {
 	var encode string
-	var alphabet map[int]rune
+	alphabet := make(map[int]rune)
 
 	encode = strings.ToUpper(code)
 
@@ -236,6 +241,7 @@ func (c *Confuse) coalgo2(code string) string {
 // transform, but mapped with special characters like _.
 func (c *Confuse) coalgo3(code string) string {
 	specChar := []string{"_", "-"}
+
 	mode := "lower"
 	c.caseTransform(code, mode)
 
@@ -247,22 +253,27 @@ func (c *Confuse) coalgo3(code string) string {
 	// of __.
 	newer := make([]string, AN)
 	for i := 0; i < AN; i++ {
-		if i < c.cobit {
-			newer[i] = specChar[0] + fmt.Sprint(i+1)
-		}
-		newer[i] = specChar[1] + fmt.Sprint(i%c.cobit) + specChar[0] + fmt.Sprint(i+1)
+		newer[i] = specChar[1] + fmt.Sprint(i/c.cobit) + specChar[0] + fmt.Sprint(i%c.cobit)
 	}
 
-	var ret string
+	ret := ""
 	for _, v := range code {
-		// FIXME: Normally, after coversion, all letter will be lower.
-		// And h become 104, 104-97+1=8. But here always indicate n is
-		// out range of index, that's so weird.
-		//n := (int)(code[k]) - 48 - 97
 		n := int(v) - 97 + 1
 		ret += newer[n]
 	}
 	return ret
+}
+
+func (c *Confuse) parseEncodeIntoFile(code string, algoid int) bool {
+	var newdata string
+	rand.Seed(8)
+	name := "co" + fmt.Sprint(algoid) + "_" + fmt.Sprint(rand.Intn(100)) + "txt"
+
+	newdata = c.coalgo(algoid, code)
+	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
+		log.Fatalf("file write failed.")
+	}
+	return true
 }
 
 func (c *Confuse) processFileOB(filename string, algoid int) string {
@@ -272,7 +283,8 @@ func (c *Confuse) processFileOB(filename string, algoid int) string {
 		log.Fatalf("file read failed.")
 	}
 
-	name := "co" + fmt.Sprint(algoid) + "_" + filename
+	name := "co" + fmt.Sprint(algoid) + "_" + strings.TrimRight(filename, "go") + "txt"
+	// FIXME: data parse wrong here
 	newdata = c.coalgo(algoid, string(data))
 
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
@@ -308,7 +320,9 @@ func (c *Confuse) Deobfuscate(code string, id ...int) {
 	if len(id) > 0 {
 		c.algoid = id[0]
 		if c.checkID(c.algoid) {
-			c.dealgo(c.algoid, code)
+			go func() {
+				c.dealgo(c.algoid, code)
+			}()
 		}
 	}
 }
@@ -328,7 +342,7 @@ func (c *Confuse) dealgo(id int, code string) (newdata string) {
 
 func (c *Confuse) dealgo1(code string) string {
 	var decode string
-	var alphabet map[int]rune
+	alphabet := make(map[int]rune)
 
 	for i := 0; i < AN; i++ {
 		for j := 'i'; j <= 'r'; j++ {
@@ -352,7 +366,7 @@ func (c *Confuse) dealgo1(code string) string {
 
 func (c *Confuse) dealgo2(code string) string {
 	var decode string
-	var alphabet map[int]rune
+	alphabet := make(map[int]rune)
 
 	for i := 0; i < AN; i++ {
 		for j := 'I'; j <= 'R'; j++ {
@@ -374,9 +388,64 @@ func (c *Confuse) dealgo2(code string) string {
 	return decode
 }
 
+// TODO: refactor this stupid method and fix wrong result
 func (c *Confuse) dealgo3(code string) string {
-	// TODO
-	return code
+	m := map[string]byte{
+		"-0_0": 'a',
+		"-0_1": 'b',
+		"-0_2": 'c',
+		"-0_3": 'd',
+		"-0_4": 'e',
+		"-0_5": 'f',
+		"-0_6": 'g',
+		"-0_7": 'h',
+		"-1_0": 'i',
+		"-1_1": 'j',
+		"-1_2": 'k',
+		"-1_3": 'l',
+		"-1_4": 'm',
+		"-1_5": 'n',
+		"-1_6": 'o',
+		"-1_7": 'p',
+		"-2_0": 'q',
+		"-2_1": 'r',
+		"-2_2": 's',
+		"-2_3": 't',
+		"-2_4": 'u',
+		"-2_5": 'v',
+		"-2_6": 'w',
+		"-2_7": 'x',
+		"-3_0": 'y',
+		"-3_1": 'z',
+	}
+
+	ret := []byte{}
+	res := []byte{}
+	sign := 0
+	for i := 0; i < len(code); i++ {
+		if i > 0 && i%4 == 0 {
+			for j := sign; j < i; j++ {
+				ret = append(ret, code[j])
+			}
+			if v, ok := m[string(ret)]; ok {
+				sign += 4
+				res = append(res, v)
+			}
+		}
+	}
+	return string(res)
+}
+
+func (c *Confuse) parseDecodeIntoFile(code string, algoid int) bool {
+	var newdata string
+	rand.Seed(8)
+	name := "de" + fmt.Sprint(algoid) + "_" + fmt.Sprint(rand.Intn(100)) + "txt"
+
+	newdata = c.dealgo(algoid, code)
+	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
+		log.Fatalf("file write failed.")
+	}
+	return true
 }
 
 func (c *Confuse) processFileDE(filename string, algoid int) string {
@@ -384,7 +453,8 @@ func (c *Confuse) processFileDE(filename string, algoid int) string {
 	if err != nil {
 		log.Fatalf("file read failed.")
 	}
-	name := "de" + fmt.Sprint(algoid) + "_" + filename
+	name := "de" + fmt.Sprint(algoid) + "_" + strings.TrimRight(filename, "go") + "txt"
+	// FIXME: same with processFielOB
 	newdata := c.dealgo(algoid, string(data))
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		log.Fatalf("file write failed.")
@@ -412,7 +482,7 @@ Again:
 
 	switch inputO {
 	case "OB":
-		fmt.Printf("Which option you want to obfuscate/deobfuscate: [code or file]: ")
+		fmt.Printf("Which option you want to obfuscate: [code or file]: ")
 		fmt.Scan(&input)
 
 		switch input {
@@ -421,7 +491,8 @@ Again:
 			fmt.Scan(&code)
 
 			if co.processOB(code) {
-				fmt.Println("Code obfuscated!")
+				co.parseEncodeIntoFile(code, co.algoid)
+				fmt.Println("Code obfuscated to the file!")
 			} else {
 				log.Warnf("code cannot obfuscated!")
 			}
@@ -437,7 +508,7 @@ Again:
 			}
 		}
 	case "DE":
-		fmt.Printf("Which option you want to obfuscate/deobfuscate: [code or file]: ")
+		fmt.Printf("Which option you want to deobfuscate: [code or file]: ")
 		fmt.Scan(&input)
 
 		switch input {
@@ -446,7 +517,8 @@ Again:
 			fmt.Scan(&code)
 
 			if co.processDE(code) {
-				fmt.Println("Code deobfuscated!")
+				co.parseDecodeIntoFile(code, co.algoid)
+				fmt.Println("Code deobfuscated to the file!")
 			} else {
 				log.Warnf("code cannot deobfuscated!")
 			}

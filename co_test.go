@@ -26,6 +26,20 @@ func TestObfuscate(t *testing.T) {
 	})
 }
 
+func BenchmarkObfuscate(b *testing.B) {
+	c := &Confuse{"", true, 3, 8}
+	for i := 0; i < b.N; i++ {
+		c.Obfuscate("hello", c.algoid)
+	}
+}
+
+func BenchmarkDeobfuscate(b *testing.B) {
+	c := &Confuse{"", true, 2, 8}
+	for i := 0; i < b.N; i++ {
+		c.Deobfuscate("-0_9-0_6", c.algoid)
+	}
+}
+
 func ExampleObfuscate() {
 	c := &Confuse{"", true, 3, 8}
 	ret := c.coalgo3("h")
