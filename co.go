@@ -130,9 +130,8 @@ func (c *Confuse) caseTransform(code string, mode ...string) {
 	}
 }
 
-// FIXME
 func (c *Confuse) isCodeEmpty(code string) bool {
-	if code == "" || code == "\n" {
+	if code == "" {
 		return false
 	}
 	return true
@@ -251,14 +250,39 @@ func (c *Confuse) coalgo3(code string) string {
 	// need some different identifiers to distinguish the code,
 	// just like _ represents a, then 2_ represents b instead
 	// of __.
+	newer := make([]string, len(code))
+	for i := 0; i < AN; i++ {
+		newer[i] = specChar[1] + fmt.Sprint(i/c.cobit) + specChar[0] + fmt.Sprint(i%c.cobit)
+	}
+
+	ret := ""
+	for i := range code {
+		idx := int(code[i])
+		// TODO: parse other special characters rather than letter only
+		if 97 <= idx && idx <= 122 {
+			n := idx - 97 + 1
+			ret += newer[n]
+		}
+	}
+	return ret
+}
+
+// TODO: need to refactor
+func (c *Confuse) coalgo4String(code string) string {
+	specChar := []string{"_", "-"}
+
+	mode := "lower"
+	c.caseTransform(code, mode)
+
 	newer := make([]string, AN)
 	for i := 0; i < AN; i++ {
 		newer[i] = specChar[1] + fmt.Sprint(i/c.cobit) + specChar[0] + fmt.Sprint(i%c.cobit)
 	}
 
 	ret := ""
-	for _, v := range code {
-		n := int(v) - 97 + 1
+	for i := range code {
+		idx := int(code[i])
+		n := idx - 97 + 1
 		ret += newer[n]
 	}
 	return ret
@@ -266,10 +290,10 @@ func (c *Confuse) coalgo3(code string) string {
 
 func (c *Confuse) parseEncodeIntoFile(code string, algoid int) bool {
 	var newdata string
-	rand.Seed(8)
-	name := "co" + fmt.Sprint(algoid) + "_" + fmt.Sprint(rand.Intn(100)) + "txt"
+	rand.Seed(1000)
+	name := "co" + fmt.Sprint(algoid) + "_" + fmt.Sprint(rand.Intn(100000)) + ".txt"
 
-	newdata = c.coalgo(algoid, code)
+	newdata = c.coalgo4String(code)
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		log.Fatalf("file write failed.")
 	}
@@ -278,15 +302,15 @@ func (c *Confuse) parseEncodeIntoFile(code string, algoid int) bool {
 
 func (c *Confuse) processFileOB(filename string, algoid int) string {
 	var newdata string
+
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("file read failed.")
 	}
 
 	name := "co" + fmt.Sprint(algoid) + "_" + strings.TrimRight(filename, "go") + "txt"
-	// FIXME: data parse wrong here
-	newdata = c.coalgo(algoid, string(data))
 
+	newdata = c.coalgo(algoid, string(data))
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		log.Fatalf("file write failed.")
 	}
@@ -389,6 +413,7 @@ func (c *Confuse) dealgo2(code string) string {
 }
 
 // TODO: refactor this stupid method and fix wrong result
+// FIXME: output works but wrong result
 func (c *Confuse) dealgo3(code string) string {
 	m := map[string]byte{
 		"-0_0": 'a',
@@ -438,8 +463,8 @@ func (c *Confuse) dealgo3(code string) string {
 
 func (c *Confuse) parseDecodeIntoFile(code string, algoid int) bool {
 	var newdata string
-	rand.Seed(8)
-	name := "de" + fmt.Sprint(algoid) + "_" + fmt.Sprint(rand.Intn(100)) + "txt"
+	rand.Seed(1000)
+	name := "de" + fmt.Sprint(algoid) + "_" + fmt.Sprint(rand.Intn(100000)) + ".txt"
 
 	newdata = c.dealgo(algoid, code)
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
@@ -453,8 +478,9 @@ func (c *Confuse) processFileDE(filename string, algoid int) string {
 	if err != nil {
 		log.Fatalf("file read failed.")
 	}
-	name := "de" + fmt.Sprint(algoid) + "_" + strings.TrimRight(filename, "go") + "txt"
-	// FIXME: same with processFielOB
+
+	name := "de" + fmt.Sprint(algoid) + "_" + strings.TrimRight(filename, "txt") + "go"
+
 	newdata := c.dealgo(algoid, string(data))
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		log.Fatalf("file write failed.")
@@ -492,7 +518,7 @@ Again:
 
 			if co.processOB(code) {
 				co.parseEncodeIntoFile(code, co.algoid)
-				fmt.Println("Code obfuscated to the file!")
+				log.Infof("code obfuscated to the file!")
 			} else {
 				log.Warnf("code cannot obfuscated!")
 			}
@@ -518,7 +544,7 @@ Again:
 
 			if co.processDE(code) {
 				co.parseDecodeIntoFile(code, co.algoid)
-				fmt.Println("Code deobfuscated to the file!")
+				log.Infof("code deobfuscated to the file!")
 			} else {
 				log.Warnf("code cannot deobfuscated!")
 			}
