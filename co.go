@@ -25,6 +25,7 @@ type Confuse struct {
 	algoed bool
 	algoid int
 	cobit  int
+	debug  bool
 }
 
 // confuser defines code confuse interface
@@ -36,24 +37,26 @@ type confuser interface {
 	isCodeEmpty(code string) (ok bool)
 
 	// for code obfuscate
-	processOB(code string)
-	Obfuscate(code string, id ...int)
-	coalgo(id int, code string) (newdata string)
-	coalgo1(code string) string
-	coalgo2(code string) string
-	coalgo3(code string) string
-	parseEncodeIntoFile(code string, algoid int) bool
-	processFileOB(filename string, algoid int) string
+	processOB(code string, debug bool)
+	Obfuscate(code string, debug bool, id ...int)
+	coalgo(id int, code string, debug bool) (newdata string)
+	coalgo1(code string, debug bool) string
+	coalgo2(code string, debug bool) string
+	mapCode2Char(code string, len int) []string
+	coalgo3(code string, debug bool) string
+	coalgo4String(code string, debug bool) string
+	parseEncodeIntoFile(code string, algoid int, debug bool) bool
+	processFileOB(filename string, algoid int, debug bool) string
 
 	// for code deobfuscate
-	processDE(code string)
-	Deobfuscate(code string, id ...int)
-	dealgo(id int, code string) (newdata string)
-	dealgo1(code string) string
-	dealgo2(code string) string
-	dealgo3(code string) string
-	parseDecodeIntoFile(code string, algoid int) bool
-	processFileDE(filename string, algoid int) string
+	processDE(code string, debug bool)
+	Deobfuscate(code string, debug bool, id ...int)
+	dealgo(id int, code string, debug bool) (newdata string)
+	dealgo1(code string, debug bool) string
+	dealgo2(code string, debug bool) string
+	dealgo3(code string, debug bool) string
+	parseDecodeIntoFile(code string, algoid int, debug bool) bool
+	processFileDE(filename string, algoid int, debug bool) string
 }
 
 // New creates new code confuse instance
@@ -63,6 +66,7 @@ func (c *Confuse) New() *Confuse {
 		algoed: c.algoed,
 		algoid: c.algoid,
 		cobit:  c.cobit,
+		debug:  c.debug,
 	}
 	return co
 }
@@ -137,14 +141,14 @@ func (c *Confuse) isCodeEmpty(code string) bool {
 	return true
 }
 
-func (c *Confuse) processOB(code string) (ok bool) {
+func (c *Confuse) processOB(code string, debug bool) (ok bool) {
 	if c.isCodeEmpty(code) {
 		ok = true
 		if c.algoed && c.checkStatus(c.status) {
 			switch c.status {
 			case OB:
 				if c.checkID(c.algoid) {
-					c.Obfuscate(code, c.algoid)
+					c.Obfuscate(code, debug, c.algoid)
 				} else {
 					log.Fatalf("wrong encoding number.")
 				}
@@ -152,7 +156,7 @@ func (c *Confuse) processOB(code string) (ok bool) {
 		} else {
 			switch c.status {
 			case OB:
-				c.Obfuscate(code)
+				c.Obfuscate(code, debug)
 			}
 		}
 	}
@@ -160,26 +164,26 @@ func (c *Confuse) processOB(code string) (ok bool) {
 }
 
 // Obfuscate obfuscates the code
-func (c *Confuse) Obfuscate(code string, id ...int) {
+func (c *Confuse) Obfuscate(code string, debug bool, id ...int) {
 	if len(id) > 0 {
 		c.algoid = id[0]
 		if c.checkID(c.algoid) {
 			go func() {
-				c.coalgo(c.algoid, code)
+				c.coalgo(c.algoid, code, debug)
 			}()
 		}
 	}
 }
 
 // coalgo defines code obfuscation algorithms
-func (c *Confuse) coalgo(id int, code string) (newdata string) {
+func (c *Confuse) coalgo(id int, code string, debug bool) (newdata string) {
 	switch id {
 	case 1:
-		newdata = c.coalgo1(code)
+		newdata = c.coalgo1(code, debug)
 	case 2:
-		newdata = c.coalgo2(code)
+		newdata = c.coalgo2(code, debug)
 	case 3:
-		newdata = c.coalgo3(code)
+		newdata = c.coalgo3(code, debug)
 	}
 	return
 }
@@ -187,7 +191,7 @@ func (c *Confuse) coalgo(id int, code string) (newdata string) {
 // coalgo1 encoding the code string with ordinary offset
 // transform, which means map alphabet to next n alphabet
 // with all lower case.
-func (c *Confuse) coalgo1(code string) string {
+func (c *Confuse) coalgo1(code string, debug bool) string {
 	var encode string
 	alphabet := make(map[int]rune)
 
@@ -213,7 +217,7 @@ func (c *Confuse) coalgo1(code string) string {
 // coalgo2 encoding the code string with ordinary offset
 // transform, which means map alphabet to next n alphabet
 // with all upper case.
-func (c *Confuse) coalgo2(code string) string {
+func (c *Confuse) coalgo2(code string, debug bool) string {
 	var encode string
 	alphabet := make(map[int]rune)
 
@@ -236,71 +240,61 @@ func (c *Confuse) coalgo2(code string) string {
 	return encode
 }
 
-// coalgo3 encoding the code string with ordinary offset
-// transform, but mapped with special characters like _.
-func (c *Confuse) coalgo3(code string) string {
-	specChar := []string{"_", "-"}
-
+func (c *Confuse) mapCode2Char(code string, len int) []string {
 	mode := "lower"
 	c.caseTransform(code, mode)
 
-	// this flow converts char to _ or - in code. If we only
-	// use _ and - without other identifiers then we cannot
-	// recognize what exactly alphabet is represent, so we
-	// need some different identifiers to distinguish the code,
-	// just like _ represents a, then 2_ represents b instead
-	// of __.
-	newer := make([]string, len(code))
+	specChar := []string{"_", "-"}
+	newer := make([]string, len)
+
 	for i := 0; i < AN; i++ {
 		newer[i] = specChar[1] + fmt.Sprint(i/c.cobit) + specChar[0] + fmt.Sprint(i%c.cobit)
 	}
+	return newer
+}
 
+// coalgo3 encoding the code string with ordinary offset
+// transform, but mapped with special characters like _.
+func (c *Confuse) coalgo3(code string, debug bool) string {
 	ret := ""
+	newer := c.mapCode2Char(code, len(code))
+
 	for i := range code {
 		idx := int(code[i])
 		// TODO: parse other special characters rather than letter only
 		if 97 <= idx && idx <= 122 {
-			n := idx - 97 + 1
+			n := idx - 97
 			ret += newer[n]
 		}
 	}
 	return ret
 }
 
-// TODO: need to refactor
-func (c *Confuse) coalgo4String(code string) string {
-	specChar := []string{"_", "-"}
-
-	mode := "lower"
-	c.caseTransform(code, mode)
-
-	newer := make([]string, AN)
-	for i := 0; i < AN; i++ {
-		newer[i] = specChar[1] + fmt.Sprint(i/c.cobit) + specChar[0] + fmt.Sprint(i%c.cobit)
-	}
-
+func (c *Confuse) coalgo4String(code string, debug bool) string {
 	ret := ""
+	newer := c.mapCode2Char(code, AN)
+
 	for i := range code {
 		idx := int(code[i])
-		n := idx - 97 + 1
+		n := idx - 97
 		ret += newer[n]
 	}
 	return ret
 }
 
-func (c *Confuse) parseEncodeIntoFile(code string, algoid int) bool {
+func (c *Confuse) parseEncodeIntoFile(code string, algoid int, debug bool) bool {
 	var newdata string
 	rand.Seed(1000)
 	name := "co" + fmt.Sprint(algoid) + "_" + fmt.Sprint(rand.Intn(100000)) + ".txt"
 
-	newdata = c.coalgo4String(code)
+	newdata = c.coalgo4String(code, debug)
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		log.Fatalf("file write failed.")
 	}
 	return true
 }
 
-func (c *Confuse) processFileOB(filename string, algoid int) string {
+func (c *Confuse) processFileOB(filename string, algoid int, debug bool) string {
 	var newdata string
 
 	data, err := ioutil.ReadFile(filename)
@@ -310,21 +304,21 @@ func (c *Confuse) processFileOB(filename string, algoid int) string {
 
 	name := "co" + fmt.Sprint(algoid) + "_" + strings.TrimRight(filename, "go") + "txt"
 
-	newdata = c.coalgo(algoid, string(data))
+	newdata = c.coalgo(algoid, string(data), debug)
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		log.Fatalf("file write failed.")
 	}
 	return newdata
 }
 
-func (c *Confuse) processDE(code string) (ok bool) {
+func (c *Confuse) processDE(code string, debug bool) (ok bool) {
 	if c.isCodeEmpty(code) {
 		ok = true
 		if c.algoed && c.checkStatus(c.status) {
 			switch c.status {
 			case DE:
 				if c.checkID(c.algoid) {
-					c.Deobfuscate(code, c.algoid)
+					c.Deobfuscate(code, debug, c.algoid)
 				} else {
 					log.Fatalf("wrong decoding number.")
 				}
@@ -332,7 +326,7 @@ func (c *Confuse) processDE(code string) (ok bool) {
 		} else {
 			switch c.status {
 			case DE:
-				c.Deobfuscate(code)
+				c.Deobfuscate(code, debug)
 			}
 		}
 	}
@@ -340,31 +334,31 @@ func (c *Confuse) processDE(code string) (ok bool) {
 }
 
 // Deobfuscate deobfuscates the code
-func (c *Confuse) Deobfuscate(code string, id ...int) {
+func (c *Confuse) Deobfuscate(code string, debug bool, id ...int) {
 	if len(id) > 0 {
 		c.algoid = id[0]
 		if c.checkID(c.algoid) {
 			go func() {
-				c.dealgo(c.algoid, code)
+				c.dealgo(c.algoid, code, debug)
 			}()
 		}
 	}
 }
 
 // dealgo defines code deobfuscation algorithms
-func (c *Confuse) dealgo(id int, code string) (newdata string) {
+func (c *Confuse) dealgo(id int, code string, debug bool) (newdata string) {
 	switch id {
 	case 1:
-		newdata = c.dealgo1(code)
+		newdata = c.dealgo1(code, debug)
 	case 2:
-		newdata = c.dealgo2(code)
+		newdata = c.dealgo2(code, debug)
 	case 3:
-		newdata = c.dealgo3(code)
+		newdata = c.dealgo3(code, debug)
 	}
 	return
 }
 
-func (c *Confuse) dealgo1(code string) string {
+func (c *Confuse) dealgo1(code string, debug bool) string {
 	var decode string
 	alphabet := make(map[int]rune)
 
@@ -388,7 +382,7 @@ func (c *Confuse) dealgo1(code string) string {
 	return decode
 }
 
-func (c *Confuse) dealgo2(code string) string {
+func (c *Confuse) dealgo2(code string, debug bool) string {
 	var decode string
 	alphabet := make(map[int]rune)
 
@@ -412,68 +406,84 @@ func (c *Confuse) dealgo2(code string) string {
 	return decode
 }
 
-// TODO: refactor this stupid method and fix wrong result
-// FIXME: output works but wrong result
-func (c *Confuse) dealgo3(code string) string {
-	m := map[string]byte{
-		"-0_0": 'a',
-		"-0_1": 'b',
-		"-0_2": 'c',
-		"-0_3": 'd',
-		"-0_4": 'e',
-		"-0_5": 'f',
-		"-0_6": 'g',
-		"-0_7": 'h',
-		"-1_0": 'i',
-		"-1_1": 'j',
-		"-1_2": 'k',
-		"-1_3": 'l',
-		"-1_4": 'm',
-		"-1_5": 'n',
-		"-1_6": 'o',
-		"-1_7": 'p',
-		"-2_0": 'q',
-		"-2_1": 'r',
-		"-2_2": 's',
-		"-2_3": 't',
-		"-2_4": 'u',
-		"-2_5": 'v',
-		"-2_6": 'w',
-		"-2_7": 'x',
-		"-3_0": 'y',
-		"-3_1": 'z',
+func (c *Confuse) dealgo3(code string, debug bool) string {
+	m := map[rune]string{
+		'a': "-0_0",
+		'b': "-0_1",
+		'c': "-0_2",
+		'd': "-0_3",
+		'e': "-0_4",
+		'f': "-0_5",
+		'g': "-0_6",
+		'h': "-0_7",
+		'i': "-1_0",
+		'j': "-1_1",
+		'k': "-1_2",
+		'l': "-1_3",
+		'm': "-1_4",
+		'n': "-1_5",
+		'o': "-1_6",
+		'p': "-1_7",
+		'q': "-2_0",
+		'r': "-2_1",
+		's': "-2_2",
+		't': "-2_3",
+		'u': "-2_4",
+		'v': "-2_5",
+		'w': "-2_6",
+		'x': "-2_7",
+		'y': "-3_0",
+		'z': "-3_1",
 	}
 
-	ret := []byte{}
-	res := []byte{}
+	ret := ""
+	res := ""
 	sign := 0
+
 	for i := 0; i < len(code); i++ {
-		if i > 0 && i%4 == 0 {
-			for j := sign; j < i; j++ {
-				ret = append(ret, code[j])
+		if (i+1)%4 == 0 {
+			for j := sign; j < i+1; j++ {
+				ret += string(code[j])
 			}
-			if v, ok := m[string(ret)]; ok {
-				sign += 4
-				res = append(res, v)
+
+			if debug {
+				fmt.Printf("ret ----> %v\n", ret)
 			}
+
+			for idx, v := range m {
+				if ret == v {
+					res += string(idx)
+					if debug {
+						fmt.Printf("idx ----> %v\n", idx)
+					}
+				}
+			}
+			if debug {
+				fmt.Printf("res ----> %v\n", res)
+			}
+			sign += 4
+			ret = ""
 		}
 	}
-	return string(res)
+	if debug {
+		fmt.Printf("result ----> %v\n", res)
+	}
+	return res
 }
 
-func (c *Confuse) parseDecodeIntoFile(code string, algoid int) bool {
+func (c *Confuse) parseDecodeIntoFile(code string, algoid int, debug bool) bool {
 	var newdata string
 	rand.Seed(1000)
 	name := "de" + fmt.Sprint(algoid) + "_" + fmt.Sprint(rand.Intn(100000)) + ".txt"
 
-	newdata = c.dealgo(algoid, code)
+	newdata = c.dealgo(algoid, code, debug)
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		log.Fatalf("file write failed.")
 	}
 	return true
 }
 
-func (c *Confuse) processFileDE(filename string, algoid int) string {
+func (c *Confuse) processFileDE(filename string, algoid int, debug bool) string {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("file read failed.")
@@ -481,7 +491,7 @@ func (c *Confuse) processFileDE(filename string, algoid int) string {
 
 	name := "de" + fmt.Sprint(algoid) + "_" + strings.TrimRight(filename, "txt") + "go"
 
-	newdata := c.dealgo(algoid, string(data))
+	newdata := c.dealgo(algoid, string(data), debug)
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		log.Fatalf("file write failed.")
 	}
@@ -494,9 +504,10 @@ func main() {
 		inputO   string
 		filename string
 		code     string
+		debug    bool
 	)
 
-	co := &Confuse{input, true, 3, 8}
+	co := &Confuse{input, true, 3, 8, debug}
 
 Again:
 	fmt.Printf("Please input OB for obfuscation or DE for deobfuscation: ")
@@ -516,8 +527,11 @@ Again:
 			fmt.Printf("Please input the code string: ")
 			fmt.Scan(&code)
 
-			if co.processOB(code) {
-				co.parseEncodeIntoFile(code, co.algoid)
+			fmt.Printf("Would you like enable debug mode? [true or false]: ")
+			fmt.Scan(&debug)
+
+			if co.processOB(code, debug) {
+				co.parseEncodeIntoFile(code, co.algoid, debug)
 				log.Infof("code obfuscated to the file!")
 			} else {
 				log.Warnf("code cannot obfuscated!")
@@ -526,8 +540,11 @@ Again:
 			fmt.Printf("Please input filename: ")
 			fmt.Scan(&filename)
 
+			fmt.Printf("Would you like enable debug mode? [ture or false]: ")
+			fmt.Scan(&debug)
+
 			if filename != "" {
-				co.processFileOB(filename, co.algoid)
+				co.processFileOB(filename, co.algoid, debug)
 				log.Infof("file obfuscated.")
 			} else {
 				log.Warnf("invalid filename!")
@@ -542,8 +559,11 @@ Again:
 			fmt.Printf("Please input the code string: ")
 			fmt.Scan(&code)
 
-			if co.processDE(code) {
-				co.parseDecodeIntoFile(code, co.algoid)
+			fmt.Printf("Would you like enable debug mode? [ture or false]: ")
+			fmt.Scan(&debug)
+
+			if co.processDE(code, debug) {
+				co.parseDecodeIntoFile(code, co.algoid, debug)
 				log.Infof("code deobfuscated to the file!")
 			} else {
 				log.Warnf("code cannot deobfuscated!")
@@ -552,8 +572,11 @@ Again:
 			fmt.Printf("Please input filename: ")
 			fmt.Scan(&filename)
 
+			fmt.Printf("Would you like enable debug mode? [ture or false]: ")
+			fmt.Scan(&debug)
+
 			if filename != "" {
-				co.processFileDE(filename, co.algoid)
+				co.processFileDE(filename, co.algoid, debug)
 				log.Infof("file deobfuscated.")
 			} else {
 				log.Warnf("invalid filename!")
