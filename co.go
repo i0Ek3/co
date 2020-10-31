@@ -6,8 +6,6 @@ import (
 	"math/rand"
 	"strings"
 	"unicode"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // code confuse operations
@@ -30,7 +28,6 @@ type Confuse struct {
 
 // confuser defines code confuse interface
 type confuser interface {
-	New() *Confuse
 	checkStatus(status string) bool
 	checkID(id int) bool
 	caseTransform(code string, mode ...string)
@@ -59,14 +56,13 @@ type confuser interface {
 	processFileDE(filename string, algoid int, debug bool) string
 }
 
-// New creates new code confuse instance
-func (c *Confuse) New() *Confuse {
+// New creates a pointer type Confuse
+func NewConfuse(defa bool, id int, bit int, debug bool) *Confuse {
 	co := &Confuse{
-		status: c.status,
-		algoed: c.algoed,
-		algoid: c.algoid,
-		cobit:  c.cobit,
-		debug:  c.debug,
+		algoed: defa,
+		algoid: id,
+		cobit:  bit,
+		debug:  debug,
 	}
 	return co
 }
@@ -150,7 +146,7 @@ func (c *Confuse) processOB(code string, debug bool) (ok bool) {
 				if c.checkID(c.algoid) {
 					c.Obfuscate(code, debug, c.algoid)
 				} else {
-					log.Fatalf("wrong encoding number.")
+					showMsg("wrong encoding number.")
 				}
 			}
 		} else {
@@ -289,7 +285,7 @@ func (c *Confuse) parseEncodeIntoFile(code string, algoid int, debug bool) bool 
 
 	newdata = c.coalgo4String(code, debug)
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
-		log.Fatalf("file write failed.")
+		showMsg("file write failed.")
 	}
 	return true
 }
@@ -299,14 +295,14 @@ func (c *Confuse) processFileOB(filename string, algoid int, debug bool) string 
 
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Fatalf("file read failed.")
+		showMsg("file read failed.")
 	}
 
 	name := "co" + fmt.Sprint(algoid) + "_" + strings.TrimRight(filename, "go") + "txt"
 
 	newdata = c.coalgo(algoid, string(data), debug)
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
-		log.Fatalf("file write failed.")
+		showMsg("file write failed.")
 	}
 	return newdata
 }
@@ -320,7 +316,7 @@ func (c *Confuse) processDE(code string, debug bool) (ok bool) {
 				if c.checkID(c.algoid) {
 					c.Deobfuscate(code, debug, c.algoid)
 				} else {
-					log.Fatalf("wrong decoding number.")
+					showMsg("wrong decoding number.")
 				}
 			}
 		} else {
@@ -478,7 +474,7 @@ func (c *Confuse) parseDecodeIntoFile(code string, algoid int, debug bool) bool 
 
 	newdata = c.dealgo(algoid, code, debug)
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
-		log.Fatalf("file write failed.")
+		showMsg("file write failed.")
 	}
 	return true
 }
@@ -486,16 +482,34 @@ func (c *Confuse) parseDecodeIntoFile(code string, algoid int, debug bool) bool 
 func (c *Confuse) processFileDE(filename string, algoid int, debug bool) string {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Fatalf("file read failed.")
+		showMsg("file read failed.")
 	}
 
 	name := "de" + fmt.Sprint(algoid) + "_" + strings.TrimRight(filename, "txt") + "go"
 
 	newdata := c.dealgo(algoid, string(data), debug)
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
-		log.Fatalf("file write failed.")
+		showMsg("file write failed.")
 	}
 	return newdata
+}
+
+func showMsg(msg string) {
+	fmt.Printf("\tWarning -----> %v\n", msg)
+}
+
+func doLoop(input, res1, res2, msg string) bool {
+	if input == res1 || input == res2 {
+		return false
+	} else {
+		showMsg(msg)
+		return true
+	}
+}
+
+func runIO(input *string, output string) {
+	fmt.Printf(output)
+	fmt.Scan(input)
 }
 
 func main() {
@@ -504,82 +518,111 @@ func main() {
 		inputO   string
 		filename string
 		code     string
-		debug    bool
+		debug    string
 	)
 
-	co := &Confuse{input, true, 3, 8, debug}
+	const (
+		OBSTR = "OB"
+		DESTR = "DE"
 
-Again:
-	fmt.Printf("Please input OB for obfuscation or DE for deobfuscation: ")
-	fmt.Scan(&inputO)
-	if inputO != "OB" && inputO != "DE" {
-		log.Warnf("none of OB or DE, please input again!")
-		goto Again
+		OUTPUT = "Which option do you want to operate? [OB or DE]: "
+		OBMSG  = "None of them, please input again!"
+
+		CODE = "code"
+		FILE = "file"
+
+		T = "true"
+		F = "false"
+
+		OBSRC = "Which option do you want to obfuscate? [code or file]: "
+		DESRC = "Which option do you want to deobfuscate? [code or file]: "
+
+		CODEIN = "Please input the code string: "
+		DEBUG  = "Would you like to enable the debug mode? [true or false]: "
+		FNSTR  = "Please input the filename: "
+	)
+
+	co := NewConfuse(true, 3, 8, true)
+
+A1:
+	runIO(&inputO, OUTPUT)
+	if doLoop(inputO, OBSTR, DESTR, OBMSG) {
+		goto A1
 	}
 
 	switch inputO {
-	case "OB":
-		fmt.Printf("Which option you want to obfuscate: [code or file]: ")
-		fmt.Scan(&input)
+	case OBSTR:
+	A2:
+		runIO(&input, OBSRC)
+		if doLoop(input, CODE, FILE, OBMSG) {
+			goto A2
+		}
 
 		switch input {
-		case "code":
-			fmt.Printf("Please input the code string: ")
-			fmt.Scan(&code)
-
-			fmt.Printf("Would you like enable debug mode? [true or false]: ")
-			fmt.Scan(&debug)
-
-			if co.processOB(code, debug) {
-				co.parseEncodeIntoFile(code, co.algoid, debug)
-				log.Infof("code obfuscated to the file!")
-			} else {
-				log.Warnf("code cannot obfuscated!")
+		case CODE:
+			runIO(&code, CODEIN)
+		A3:
+			runIO(&debug, DEBUG)
+			if doLoop(debug, T, F, OBMSG) {
+				goto A3
 			}
-		case "file":
-			fmt.Printf("Please input filename: ")
-			fmt.Scan(&filename)
 
-			fmt.Printf("Would you like enable debug mode? [ture or false]: ")
-			fmt.Scan(&debug)
+			if co.processOB(code, co.debug) {
+				co.parseEncodeIntoFile(code, co.algoid, co.debug)
+				showMsg("code obfuscated to the file!")
+			} else {
+				showMsg("code cannot obfuscated!")
+			}
+		case FILE:
+			runIO(&filename, FNSTR)
+		A4:
+			runIO(&debug, DEBUG)
+			if doLoop(debug, T, F, OBMSG) {
+				goto A4
+			}
 
 			if filename != "" {
-				co.processFileOB(filename, co.algoid, debug)
-				log.Infof("file obfuscated.")
+				co.processFileOB(filename, co.algoid, co.debug)
+				showMsg("file obfuscated.")
 			} else {
-				log.Warnf("invalid filename!")
+				showMsg("invalid filename!")
 			}
 		}
-	case "DE":
-		fmt.Printf("Which option you want to deobfuscate: [code or file]: ")
-		fmt.Scan(&input)
+	case DESTR:
+	A5:
+		runIO(&input, DESRC)
+		if doLoop(input, CODE, FILE, OBMSG) {
+			goto A5
+		}
 
 		switch input {
-		case "code":
-			fmt.Printf("Please input the code string: ")
-			fmt.Scan(&code)
-
-			fmt.Printf("Would you like enable debug mode? [ture or false]: ")
-			fmt.Scan(&debug)
-
-			if co.processDE(code, debug) {
-				co.parseDecodeIntoFile(code, co.algoid, debug)
-				log.Infof("code deobfuscated to the file!")
-			} else {
-				log.Warnf("code cannot deobfuscated!")
+		case CODE:
+			runIO(&code, CODEIN)
+		A6:
+			runIO(&debug, DEBUG)
+			if doLoop(debug, T, F, OBMSG) {
+				goto A6
 			}
-		case "file":
-			fmt.Printf("Please input filename: ")
-			fmt.Scan(&filename)
 
-			fmt.Printf("Would you like enable debug mode? [ture or false]: ")
-			fmt.Scan(&debug)
+			if co.processDE(code, co.debug) {
+				co.parseDecodeIntoFile(code, co.algoid, co.debug)
+				showMsg("code deobfuscated to the file!")
+			} else {
+				showMsg("code cannot deobfuscated!")
+			}
+		case FILE:
+			runIO(&filename, FNSTR)
+		A7:
+			runIO(&debug, DEBUG)
+			if doLoop(debug, T, F, OBMSG) {
+				goto A7
+			}
 
 			if filename != "" {
-				co.processFileDE(filename, co.algoid, debug)
-				log.Infof("file deobfuscated.")
+				co.processFileDE(filename, co.algoid, co.debug)
+				showMsg("file deobfuscated.")
 			} else {
-				log.Warnf("invalid filename!")
+				showMsg("invalid filename!")
 			}
 		}
 	default:
