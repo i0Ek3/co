@@ -12,15 +12,31 @@
 - no third-party libraries 
 - customize the error message display
 
+## Run & Build 
+
+`go run co.go` or `go build ; ./co`
 
 ## Install
 
 `go get github.com/i0Ek3/co`
 
-
 ## Usage
 
-`go run co.go` or `go build ; ./co`
+```Go
+package main
+
+import (
+    co "github.com/i0Ek3/co"
+)
+
+func main() {
+    //...
+    co.Obfuscate()
+    co.Debfuscate()
+    //...
+}
+
+```
 
 
 ## TODO
