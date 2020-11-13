@@ -26,7 +26,7 @@
 package main
 
 import (
-    co "github.com/i0Ek3/co"
+    "github.com/i0Ek3/co"
 )
 
 func main() {
