@@ -305,6 +305,7 @@ func (c *Confuse) parseEncodeIntoFile(code string, algoid int, debug string) boo
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		showMsg("file write failed.")
 	}
+    fmt.Println(newdata) 
 	return true
 }
 
@@ -494,6 +495,7 @@ func (c *Confuse) parseDecodeIntoFile(code string, algoid int, debug string) boo
 	if err := ioutil.WriteFile(name, []byte(newdata), 0644); err != nil {
 		showMsg("file write failed.")
 	}
+    fmt.Println(newdata) 
 	return true
 }
 
@@ -562,7 +564,7 @@ func main() {
 
 	// default algorithm is coalgo3() and dealgo3(),
 	// and debug mode disable
-	co := NewConfuse(true, 3, 8, "false")
+	co := NewConfuse(true, 3, 8, F)
 
 A1:
 	runIO(&inputO, OUTPUT)
@@ -646,6 +648,5 @@ A1:
 			}
 		}
 	default:
-
 	}
 }
