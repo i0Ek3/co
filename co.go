@@ -14,7 +14,8 @@ const (
 	DE = "deobfuscate"
 	NO = ""
 
-	AN = 26 // alphabets number
+    // alphabets number
+	AN = 26 
 )
 
 // Confuse defines code confuse fileds
@@ -26,8 +27,8 @@ type Confuse struct {
 	debug  string
 }
 
-// confuser defines code confuse interface
-type confuser interface {
+// Obfuscation defines code confuse interface
+type Obfuscation interface {
 	checkStatus(status string) bool
 	checkID(id int) bool
 	caseTransform(code string, mode ...string)
@@ -164,9 +165,11 @@ func (c *Confuse) Obfuscate(code string, debug string, id ...int) {
 	if len(id) > 0 {
 		c.algoid = id[0]
 		if c.checkID(c.algoid) {
-			go func() {
-				c.coalgo(c.algoid, code, debug)
-			}()
+            // TODO: add channel to transport data
+			go func(i int) {
+				//c.coalgo(c.algoid, code, debug)
+				c.coalgo(i, code, debug)
+			}(c.algoid)
 		}
 	}
 }
@@ -353,9 +356,11 @@ func (c *Confuse) Deobfuscate(code string, debug string, id ...int) {
 	if len(id) > 0 {
 		c.algoid = id[0]
 		if c.checkID(c.algoid) {
-			go func() {
-				c.dealgo(c.algoid, code, debug)
-			}()
+            // TODO
+			go func(i int) {
+				//c.dealgo(c.algoid, code, debug)
+				c.dealgo(i, code, debug)
+			}(c.algoid)
 		}
 	}
 }
