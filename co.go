@@ -18,6 +18,9 @@ const (
 	AN = 26
 )
 
+// aliased
+type result []string
+
 // Confuse defines code confuse fileds
 type Confuse struct {
 	status string
@@ -40,7 +43,7 @@ type Obfuscation interface {
 	coalgo(id int, code, debug string) (newdata string)
 	coalgo1(code, debug string) string
 	coalgo2(code, debug string) string
-	mapCode2Char(code string, len int) []string
+	mapCode2Char(code string, len int) result
 	coalgo3(code, debug string) string
 	coalgo4(code, debug string) string
 	parseEncodeIntoFile(code string, algoid int, debug string) bool
@@ -241,12 +244,12 @@ func (c *Confuse) coalgo2(code, debug string) string {
 	return encode
 }
 
-func (c *Confuse) mapCode2Char(code string, len int) []string {
+func (c *Confuse) mapCode2Char(code string, len int) result {
 	mode := "lower"
 	c.caseTransform(code, mode)
 
-	specChar := []string{"_", "-"}
-	newer := make([]string, len)
+	specChar := result{"_", "-"}
+	newer := make(result, len)
 
 	for i := 0; i < AN; i++ {
 		newer[i] = specChar[1] + fmt.Sprint(i/c.cobit) + specChar[0] + fmt.Sprint(i%c.cobit)
