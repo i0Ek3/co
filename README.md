@@ -11,34 +11,13 @@
 
 ## Getting Started
 
-### Run & Build 
+`go run co.go` or `go build . ; ./co`
 
-`go run co.go` or `go build ; ./co`
-
-### Install
-
-`go get github.com/i0Ek3/co`
-
-### Usage
-
-```Go
-package main
-
-import (
-    "github.com/i0Ek3/co"
-)
-
-func main() {
-    //...
-    co.Obfuscate()
-    co.Debfuscate()
-    //...
-}
-
-```
 
 ## TODO
 
+- exported some functions
+- cmd support(later...)
 - need to refactor
 - write good comments
 - perfect the tests
